@@ -1,0 +1,40 @@
+
+iMaPP_dataset:
+  - name: MaPP_tightening
+  - filepath: "../iMaPP_database*.xlsx"
+  - sheet_name: MaPP_T
+
+  - name: MaPP_loosening
+  - filepath: "../iMaPP_database*.xlsx"
+  - sheet_name: MaPP_L
+
+
+
+bis_apis:
+  - name: credit_gap
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CREDIT_GAP/1.0/?format=csv"
+    filename: "bis_credit_gap.csv"
+
+  - name: total_credit
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_TC/2.0/?format=csv"
+    filename: "bis_total_credit.csv"
+
+  - name: debt_service_ratio
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_DSR/1.0/?format=csv"
+    filename: "bis_dsr.csv"
+
+  - name: residential_property_price
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_SPP/1.0/?format=csv"
+    filename: "bis_residential_property_price.csv"
+
+  - name: commercial_property_price
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CPP/1.0/?format=csv"
+    filename: "bis_commercial_property_price.csv"
+
+  - name: effective_exchange_rate
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_EER/1.0/?format=csv"
+    filename: "bis_effective_exchange_rate.csv"
+
+  - name: central_bank_policy_rate
+    url: "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/1.0/?format=csv"
+    filename: "bis_central_bank_policy_rate.csv"

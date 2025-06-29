@@ -1,0 +1,26 @@
+paths:
+  src_data: ../data/raw/
+  processed_data: ../data/processed/
+  dataset_output: ../data/dataset/
+  logs: ../logs/
+  results: ../results/
+
+input:
+  file_pattern: iMaPP_database*.xlsx
+  sheet_name_tightening: MaPP_T
+  sheet_name_loosening: MaPP_L
+
+output:
+  main_agg_csv: iMaPP_main_tools_quarterly_agg.csv
+  main_bin_csv: iMaPP_main_tools_quarterly_bin.csv
+  imapp_dataset_t: imapp_dataset_t.csv
+  imapp_analysis_dataset: imapp_analysis_dataset_.csv
+  final_dataset: final.csv
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  
+validation:
+  min_columns: 3
+  required_bis_columns: ["TIME_PERIOD", "OBS_VALUE"]

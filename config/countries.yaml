@@ -1,0 +1,117 @@
+
+excluded_countries:
+    - 4T
+    - 5A
+    - 5R
+    - G2
+    - XM
+    - XW
+
+countries_scope:
+  # for initial analysis
+  FRA: {name: "France", iso2: "FR", classification: "AE", region: "Europe", eu_member: true, g20_member: true}
+  DEU: {name: "Germany", iso2: "DE", classification: "AE", region: "Europe", eu_member: true, g20_member: true}
+  GBR: {name: "United Kingdom", iso2: "GB", classification: "AE", region: "Europe", eu_member: false, g20_member: true}
+  TUR: {name: "Turkey", iso2: "TR", classification: "EMDE", region: "Europe", eu_member: false, g20_member: true}
+  POL: {name: "Poland", iso2: "PL", classification: "EMDE", region: "Europe", eu_member: true, g20_member: false}
+  NOR: {name: "Norway", iso2: "NO", classification: "AE", region: "Europe", eu_member: false, g20_member: false}
+  CHE: {name: "Switzerland", iso2: "CH", classification: "AE", region: "Europe", eu_member: false, g20_member: false}
+  AUS: {name: "Australia", iso2: "AU", classification: "AE", region: "Oceania", eu_member: false, g20_member: true}
+  CAN: {name: "Canada", iso2: "CA", classification: "AE", region: "Northern America", eu_member: false, g20_member: true}
+  JPN: {name: "Japan", iso2: "JP", classification: "AE", region: "Asia", eu_member: false, g20_member: true}
+  KOR: {name: "South Korea", iso2: "KR", classification: "AE", region: "Asia", eu_member: false, g20_member: true}
+  USA: {name: "United States", iso2: "US", classification: "AE", region: "Northern America", eu_member: false, g20_member: true}
+  ARG: {name: "Argentina", iso2: "AR", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: true}
+  ZAF: {name: "South Africa", iso2: "ZA", classification: "EMDE", region: "Africa", eu_member: false, g20_member: true}
+
+
+
+
+
+
+
+
+
+# Country Configuration for Macroprudential Policy Analysis
+# Based on provided CSV file with 68 countries
+
+# countries_scope:
+#   # EU+ / G20 Overlap Countries
+#   FRA: {name: "France", iso2: "FR", classification: "AE", region: "Europe", eu_member: true, g20_member: true}
+#   DEU: {name: "Germany", iso2: "DE", classification: "AE", region: "Europe", eu_member: true, g20_member: true}
+#   ITA: {name: "Italy", iso2: "IT", classification: "AE", region: "Europe", eu_member: true, g20_member: true}
+#   GBR: {name: "United Kingdom", iso2: "GB", classification: "AE", region: "Europe", eu_member: false, g20_member: true}
+#   TUR: {name: "Turkey", iso2: "TR", classification: "EMDE", region: "Europe", eu_member: false, g20_member: true}
+#   RUS: {name: "Russia", iso2: "RU", classification: "EMDE", region: "Europe", eu_member: false, g20_member: true}
+
+#   # EU+ Countries - Advanced Economies
+#   AUT: {name: "Austria", iso2: "AT", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   BEL: {name: "Belgium", iso2: "BE", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   DNK: {name: "Denmark", iso2: "DK", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   EST: {name: "Estonia", iso2: "EE", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   FIN: {name: "Finland", iso2: "FI", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   GRC: {name: "Greece", iso2: "GR", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   IRL: {name: "Ireland", iso2: "IE", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   LVA: {name: "Latvia", iso2: "LV", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   LTU: {name: "Lithuania", iso2: "LT", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   LUX: {name: "Luxembourg", iso2: "LU", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   NLD: {name: "Netherlands", iso2: "NL", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   PRT: {name: "Portugal", iso2: "PT", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   SVK: {name: "Slovakia", iso2: "SK", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   SVN: {name: "Slovenia", iso2: "SI", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   ESP: {name: "Spain", iso2: "ES", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   SWE: {name: "Sweden", iso2: "SE", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+#   CZE: {name: "Czech Republic", iso2: "CZ", classification: "AE", region: "Europe", eu_member: true, g20_member: false}
+
+#   # EU+ Countries - Emerging Markets
+#   BGR: {name: "Bulgaria", iso2: "BG", classification: "EMDE", region: "Europe", eu_member: true, g20_member: false}
+#   HRV: {name: "Croatia", iso2: "HR", classification: "EMDE", region: "Europe", eu_member: true, g20_member: false}
+#   HUN: {name: "Hungary", iso2: "HU", classification: "EMDE", region: "Europe", eu_member: true, g20_member: false}
+#   POL: {name: "Poland", iso2: "PL", classification: "EMDE", region: "Europe", eu_member: true, g20_member: false}
+#   ROU: {name: "Romania", iso2: "RO", classification: "EMDE", region: "Europe", eu_member: true, g20_member: false}
+
+#   # EU+ Non-EU Countries
+#   ISL: {name: "Iceland", iso2: "IS", classification: "AE", region: "Europe", eu_member: false, g20_member: false}
+#   NOR: {name: "Norway", iso2: "NO", classification: "AE", region: "Europe", eu_member: false, g20_member: false}
+#   CHE: {name: "Switzerland", iso2: "CH", classification: "AE", region: "Europe", eu_member: false, g20_member: false}
+#   UKR: {name: "Ukraine", iso2: "UA", classification: "EMDE", region: "Europe", eu_member: false, g20_member: false}
+
+#   # G20 Non-EU Countries
+#   AUS: {name: "Australia", iso2: "AU", classification: "AE", region: "Oceania", eu_member: false, g20_member: true}
+#   CAN: {name: "Canada", iso2: "CA", classification: "AE", region: "Northern America", eu_member: false, g20_member: true}
+#   JPN: {name: "Japan", iso2: "JP", classification: "AE", region: "Asia", eu_member: false, g20_member: true}
+#   KOR: {name: "South Korea", iso2: "KR", classification: "AE", region: "Asia", eu_member: false, g20_member: true}
+#   USA: {name: "United States", iso2: "US", classification: "AE", region: "Northern America", eu_member: false, g20_member: true}
+#   ARG: {name: "Argentina", iso2: "AR", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: true}
+#   BRA: {name: "Brazil", iso2: "BR", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: true}
+#   CHN: {name: "China", iso2: "CN", classification: "EMDE", region: "Asia", eu_member: false, g20_member: true}
+#   IND: {name: "India", iso2: "IN", classification: "EMDE", region: "Asia", eu_member: false, g20_member: true}
+#   IDN: {name: "Indonesia", iso2: "ID", classification: "EMDE", region: "Asia", eu_member: false, g20_member: true}
+#   MEX: {name: "Mexico", iso2: "MX", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: true}
+#   SAU: {name: "Saudi Arabia", iso2: "SA", classification: "EMDE", region: "Asia", eu_member: false, g20_member: true}
+#   ZAF: {name: "South Africa", iso2: "ZA", classification: "EMDE", region: "Africa", eu_member: false, g20_member: true}
+
+#   # Other Strategic Countries
+#   CHL: {name: "Chile", iso2: "CL", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: false}
+#   COL: {name: "Colombia", iso2: "CO", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: false}
+#   HKG: {name: "Hong Kong", iso2: "HK", classification: "AE", region: "Asia", eu_member: false, g20_member: false}
+#   ISR: {name: "Israel", iso2: "IL", classification: "AE", region: "Asia", eu_member: false, g20_member: false}
+#   MYS: {name: "Malaysia", iso2: "MY", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   NZL: {name: "New Zealand", iso2: "NZ", classification: "AE", region: "Oceania", eu_member: false, g20_member: false}
+#   SGP: {name: "Singapore", iso2: "SG", classification: "AE", region: "Asia", eu_member: false, g20_member: false}
+#   THA: {name: "Thailand", iso2: "TH", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   ETH: {name: "Ethiopia", iso2: "ET", classification: "EMDE", region: "Africa", eu_member: false, g20_member: false}
+#   JAM: {name: "Jamaica", iso2: "JM", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: false}
+#   JOR: {name: "Jordan", iso2: "JO", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   KEN: {name: "Kenya", iso2: "KE", classification: "EMDE", region: "Africa", eu_member: false, g20_member: false}
+#   KWT: {name: "Kuwait", iso2: "KW", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   LBN: {name: "Lebanon", iso2: "LB", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   MAR: {name: "Morocco", iso2: "MA", classification: "EMDE", region: "Africa", eu_member: false, g20_member: false}
+#   PAK: {name: "Pakistan", iso2: "PK", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   PRY: {name: "Paraguay", iso2: "PY", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: false}
+#   PER: {name: "Peru", iso2: "PE", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: false}
+#   PHL: {name: "Philippines", iso2: "PH", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   SRB: {name: "Serbia", iso2: "RS", classification: "EMDE", region: "Europe", eu_member: false, g20_member: false}
+#   ARE: {name: "United Arab Emirates", iso2: "AE", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
+#   URY: {name: "Uruguay", iso2: "UY", classification: "EMDE", region: "Latin America & Caribbean", eu_member: false, g20_member: false}
+#   VNM: {name: "Vietnam", iso2: "VN", classification: "EMDE", region: "Asia", eu_member: false, g20_member: false}
