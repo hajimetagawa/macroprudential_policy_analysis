@@ -10,72 +10,72 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
-# 日本語フォント設定
+# Plot style configuration
 plt.rcParams['font.family'] = 'DejaVu Sans'
 sns.set_style("whitegrid")
 sns.set_palette("husl")
 
 def run_macroprudential_policy_analysis(df: pd.DataFrame) -> Dict:
     """
-    マクロ経済指標がマクロプルーデンス政策実施に与える影響を分析する。
+    Analyze the impact of macroeconomic indicators on macroprudential policy implementation.
     
-    分析内容：
-    1. 政策発動確率モデル（ロジット）
-    2. 政策発動強度モデル（負の二項分布・OLS）
-    3. 限界効果の計算
-    4. 予測精度の評価
+    Analysis includes:
+    1. Policy activation probability model (logit)
+    2. Policy activation intensity model (negative binomial/OLS)
+    3. Marginal effects calculation
+    4. Model performance evaluation
     
     Parameters:
-        df (pd.DataFrame): 分析用のDataFrame
+        df (pd.DataFrame): Analysis dataset
         
     Returns:
-        Dict: 分析結果辞書
+        Dict: Analysis results dictionary
     """
     
-    # より包括的なマクロ経済指標を使用
+    # More comprehensive macroeconomic indicators
     macro_indicators = [
-        'credit_gap_actual',  # クレジットギャップ（金融不均衡の主要指標）
-        'residential_property_price_yoy_changes_pct',  # 住宅価格上昇率
-        'debt_service_ratio_private_non_financial_sector',  # 民間債務返済比率
-        'central_bank_policy_rate_obs_value',  # 金融政策スタンス
-        'total_credit_private_non_financial_sector_all_sector',  # 民間信用総額
-        'effective_exchange_rate_real',  # 実質実効為替レート
-        'commercial_property_price_obs_value'  # 商業用不動産価格
+        'credit_gap_actual',  # Credit gap (main financial imbalance indicator)
+        'residential_property_price_yoy_changes_pct',  # Housing price growth rate
+        'debt_service_ratio_private_non_financial_sector',  # Private debt service ratio
+        'central_bank_policy_rate_obs_value',  # Monetary policy stance
+        'total_credit_private_non_financial_sector_all_sector',  # Private credit total
+        'effective_exchange_rate_real',  # Real effective exchange rate
+        'commercial_property_price_obs_value'  # Commercial real estate prices
     ]
     
     cols_to_use = ['obs_bin', 'obs_agg', 'country_code', 'year'] + macro_indicators
 
-    # データ前処理
-    print("=== データ前処理 ===")
+    # Data preprocessing
+    print("=== Data Preprocessing ===")
     
-    # 利用可能な指標のみを選択
+    # Select only available indicators
     available_indicators = [col for col in macro_indicators if col in df.columns]
     cols_to_use = ['obs_bin', 'obs_agg', 'country_code', 'year'] + available_indicators
     
-    print(f"使用するマクロ経済指標: {available_indicators}")
+    print(f"Using macroeconomic indicators: {available_indicators}")
     
-    # 欠損値処理
+    # Handle missing values
     df_clean = df[cols_to_use].copy()
     
-    # 数値型変換
+    # Convert to numeric
     numeric_cols = ['obs_bin', 'obs_agg'] + available_indicators
     for col in numeric_cols:
         df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
     
-    # 欠損値除外前後のサンプル数
-    print(f"処理前サンプル数: {len(df_clean)}")
+    # Missing value handling before/after sample size
+    print(f"Sample size before processing: {len(df_clean)}")
     df_clean = df_clean.dropna()
-    print(f"処理後サンプル数: {len(df_clean)}")
-    print(f"政策発動観測数: {df_clean['obs_bin'].sum()}")
+    print(f"Sample size after processing: {len(df_clean)}")
+    print(f"Policy activation observations: {df_clean['obs_bin'].sum()}")
     
     if len(df_clean) == 0:
-        raise ValueError("分析可能なデータがありません")
+        raise ValueError("No analyzable data available")
     
-    # マクロ経済指標の標準化（解釈しやすくするため）
+    # Standardize macroeconomic indicators (for easier interpretation)
     scaler = StandardScaler()
     df_clean[available_indicators] = scaler.fit_transform(df_clean[available_indicators])
     
-    # 多重共線性対策：高い相関を持つ変数を除去
+    # Multicollinearity check: remove variables with high correlation
     corr_matrix = df_clean[available_indicators].corr()
     high_corr_pairs = []
     for i in range(len(corr_matrix.columns)):
@@ -84,23 +84,23 @@ def run_macroprudential_policy_analysis(df: pd.DataFrame) -> Dict:
                 high_corr_pairs.append((corr_matrix.columns[i], corr_matrix.columns[j], corr_matrix.iloc[i, j]))
     
     if high_corr_pairs:
-        print(f"高い相関を持つ変数ペア: {high_corr_pairs}")
-        # 相関の高い変数ペアの後者を除去
+        print(f"High correlation variable pairs: {high_corr_pairs}")
+        # Remove the second variable in high correlation pairs
         vars_to_remove = set()
         for pair in high_corr_pairs:
             vars_to_remove.add(pair[1])
         available_indicators = [var for var in available_indicators if var not in vars_to_remove]
-        print(f"除去後の指標: {available_indicators}")
+        print(f"Indicators after removal: {available_indicators}")
     
-    # 固定効果（年のみ - 国固定効果は標本サイズが少ない場合は省略）
+    # Fixed effects (year only - country fixed effects omitted for small sample sizes)
     df_clean = pd.get_dummies(df_clean, columns=['year'], prefix='year', drop_first=True)
     
-    # 説明変数準備（マクロ指標のみ + 年固定効果）
+    # Prepare explanatory variables (macro indicators + year fixed effects)
     macro_cols = available_indicators
     year_cols = [col for col in df_clean.columns if col.startswith('year_')]
     X_cols = macro_cols + year_cols
     
-    # 完全分離チェック（政策発動が0または1のみの変数を除去）
+    # Perfect separation check (remove variables that lead to 0 or 1 only for policy activation)
     X_data = df_clean[X_cols]
     policy_activated = df_clean['obs_bin'] == 1
     policy_not_activated = df_clean['obs_bin'] == 0
@@ -108,30 +108,30 @@ def run_macroprudential_policy_analysis(df: pd.DataFrame) -> Dict:
     vars_to_keep = []
     for col in X_cols:
         if col.startswith('year_'):
-            # 年ダミーは基本的に保持（ただし変動があるもののみ）
+            # Keep year dummies with variation
             if X_data[col].nunique() > 1:
                 vars_to_keep.append(col)
         else:
-            # マクロ指標：完全分離をチェック
+            # Check for perfect separation in macro indicators
             activated_values = X_data.loc[policy_activated, col]
             not_activated_values = X_data.loc[policy_not_activated, col]
             if len(activated_values) > 0 and len(not_activated_values) > 0:
-                # 重複する値域があるかチェック
+                # Check if value ranges overlap
                 if (activated_values.min() <= not_activated_values.max() and 
                     not_activated_values.min() <= activated_values.max()):
                     vars_to_keep.append(col)
     
     X_cols = vars_to_keep
-    print(f"最終的な説明変数数: {len(X_cols)}")
+    print(f"Final number of explanatory variables: {len(X_cols)}")
     
     if len(X_cols) == 0:
-        raise ValueError("使用可能な説明変数がありません")
+        raise ValueError("No usable explanatory variables available")
     
     X = sm.add_constant(df_clean[X_cols].astype(float))
     y_binary = df_clean['obs_bin'].astype(int)
     y_count = df_clean['obs_agg'].astype(int)
     
-    # 分散膨張因子（VIF）チェック
+    # Variance inflation factor (VIF) check
     try:
         from statsmodels.stats.outliers_influence import variance_inflation_factor
         vif_data = pd.DataFrame()
@@ -139,59 +139,59 @@ def run_macroprudential_policy_analysis(df: pd.DataFrame) -> Dict:
         vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
         high_vif = vif_data[vif_data["VIF"] > 10]
         if len(high_vif) > 0:
-            print(f"高いVIF値を持つ変数: \\n{high_vif}")
+            print(f"Variables with high VIF values: \\n{high_vif}")
     except:
         pass
     
-    # === モデル1: 政策発動確率（ロジットモデル） ===
-    print("\n=== モデル1: 政策発動確率分析 ===")
+    # === Model 1: Policy activation probability (logit model) ===
+    print("\n=== Model 1: Policy Activation Probability Analysis ===")
     try:
         logit_model = sm.Logit(y_binary, X).fit(disp=False, maxiter=1000)
     except:
-        print("ロジットモデルが収束しませんでした。正則化ロジットを試します。")
-        # 正則化ロジット（L1正則化）
+        print("Logit model did not converge. Trying regularized logit.")
+        # Regularized logit (L1 regularization)
         from sklearn.linear_model import LogisticRegression
         from sklearn.metrics import classification_report
         
         lr = LogisticRegression(penalty='l1', solver='liblinear', random_state=42)
-        lr.fit(X.iloc[:, 1:], y_binary)  # 定数項を除く
+        lr.fit(X.iloc[:, 1:], y_binary)  # Exclude constant term
         
-        # statsmodelsライクなオブジェクトを作成
+        # Create statsmodels-like object
         class SimpleLogitResult:
             def __init__(self, lr_model, X, y):
                 self.params = pd.Series(lr_model.coef_[0], index=X.columns[1:])
                 self.params['const'] = lr_model.intercept_[0]
-                self.params = self.params[X.columns]  # 順序を合わせる
+                self.params = self.params[X.columns]  # Match order
                 
-                # 予測値計算
+                # Calculate predicted values
                 y_pred_proba = lr_model.predict_proba(X.iloc[:, 1:])[:, 1]
                 self.fittedvalues = y_pred_proba
                 
-                # 簡易的な統計量
+                # Simple statistics
                 from sklearn.metrics import log_loss
                 self.llf = -log_loss(y, y_pred_proba) * len(y)
-                self.pvalues = pd.Series([0.5] * len(self.params), index=self.params.index)  # ダミー値
+                self.pvalues = pd.Series([0.5] * len(self.params), index=self.params.index)  # Dummy values
                 
         logit_model = SimpleLogitResult(lr, X, y_binary)
     
-    # === モデル2: 政策発動強度（負の二項分布モデル） ===
-    print("\n=== モデル2: 政策発動強度分析 ===")
+    # === Model 2: Policy activation intensity (negative binomial model) ===
+    print("\n=== Model 2: Policy Activation Intensity Analysis ===")
     try:
         nb_model = sm.NegativeBinomial(y_count, X).fit(disp=False)
     except:
-        print("負の二項分布モデルが収束しませんでした。OLSモデルを使用します。")
+        print("Negative binomial model did not converge. Using OLS model.")
         nb_model = sm.OLS(y_count.astype(float), X).fit()
     
-    # === モデル3: 比較用OLSモデル ===
+    # === Model 3: Comparison OLS model ===
     ols_model = sm.OLS(y_count.astype(float), X).fit()
     
-    # === 限界効果計算（主要指標のみ） ===
-    print("\n=== 限界効果計算 ===")
+    # === Marginal effects calculation (main indicators only) ===
+    print("\n=== Marginal Effects Calculation ===")
     marginal_effects = {}
     
     for indicator in available_indicators:
         if indicator in X.columns and indicator in logit_model.params.index:
-            # ロジットモデルの限界効果（平均での限界効果）
+            # Marginal effects for logit model (marginal effects at mean)
             coef = logit_model.params[indicator]
             mean_prob = y_binary.mean()
             marginal_effect = coef * mean_prob * (1 - mean_prob)
@@ -202,14 +202,14 @@ def run_macroprudential_policy_analysis(df: pd.DataFrame) -> Dict:
                 'pvalue': pvalue
             }
     
-    # 結果辞書作成
+    # Create results dictionary
     results = {
         'data_info': {
             'sample_size': len(df_clean),
             'policy_activations': int(y_binary.sum()),
             'policy_activation_rate': float(y_binary.mean()),
             'indicators_used': available_indicators,
-            'y_binary': y_binary  # 可視化用に追加
+            'y_binary': y_binary  # Added for visualization
         },
         'logit_model': logit_model,
         'count_model': nb_model,
@@ -222,15 +222,15 @@ def run_macroprudential_policy_analysis(df: pd.DataFrame) -> Dict:
 
 def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: str = "../results"):
     """
-    分析結果の可視化を作成し、画像として保存する
+    Create and save analysis result visualizations
     """
-    # 出力ディレクトリ作成
+    # Create output directory
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
-    # 1. マクロ経済指標の係数プロット
+    # 1. Macroeconomic indicator coefficient plot
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
     
-    # ロジットモデルの係数
+    # Logit model coefficients
     logit_coeffs = []
     logit_indicators = []
     for indicator in results['data_info']['indicators_used']:
@@ -245,7 +245,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
     ax1.set_title('Policy Activation Probability\n(Logit Model Coefficients)', fontsize=14, fontweight='bold')
     ax1.axvline(x=0, color='red', linestyle='--', alpha=0.7)
     
-    # 限界効果プロット
+    # Marginal effects plot
     marginal_effects = []
     me_indicators = []
     for indicator, me in results['marginal_effects'].items():
@@ -264,10 +264,10 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
     plt.savefig(f"{output_dir}/policy_coefficients_and_marginal_effects.png", dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 2. 政策発動の時系列トレンド
+    # 2. Policy activation time series trends
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
     
-    # 年別政策発動率
+    # Annual policy activation rate
     yearly_stats = df_original.groupby('year').agg({
         'obs_bin': ['count', 'sum', 'mean'],
         'obs_agg': 'mean'
@@ -280,7 +280,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
     ax1.set_title('Macroprudential Policy Activation Rate Over Time', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     
-    # 主要金融危機の注釈
+    # Major financial crisis annotations
     crisis_years = [1997, 2008, 2020]
     crisis_labels = ['Asian Crisis', '2008 Crisis', 'COVID-19']
     for year, label in zip(crisis_years, crisis_labels):
@@ -289,7 +289,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
             ax1.text(year, ax1.get_ylim()[1] * 0.8, label, rotation=90, 
                     verticalalignment='bottom', fontsize=9, color='red')
     
-    # 政策発動強度の推移
+    # Policy activation intensity trends
     ax2.bar(yearly_stats.index, yearly_stats['avg_intensity'], alpha=0.7, color='steelblue')
     ax2.set_xlabel('Year', fontsize=12)
     ax2.set_ylabel('Average Policy Intensity', fontsize=12)
@@ -300,7 +300,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
     plt.savefig(f"{output_dir}/policy_trends_over_time.png", dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 3. マクロ経済指標の相関ヒートマップ
+    # 3. Macroeconomic indicator correlation heatmap
     indicators = results['data_info']['indicators_used']
     corr_data = df_original[indicators].corr()
     
@@ -315,7 +315,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
     plt.savefig(f"{output_dir}/indicators_correlation_matrix.png", dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 4. 政策発動vs非発動での指標分布比較
+    # 4. Policy activation vs non-activation indicator distribution comparison
     n_indicators = len(indicators)
     n_cols = 3
     n_rows = (n_indicators + n_cols - 1) // n_cols
@@ -335,7 +335,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
             axes[i].legend(fontsize=8)
             axes[i].grid(True, alpha=0.3)
     
-    # 空いているサブプロットを非表示
+    # Hide empty subplots
     for j in range(len(indicators), len(axes)):
         axes[j].set_visible(False)
     
@@ -344,7 +344,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
     plt.savefig(f"{output_dir}/indicators_distribution_comparison.png", dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 5. モデル予測性能の可視化
+    # 5. Model prediction performance visualization
     if hasattr(results['logit_model'], 'fittedvalues'):
         predicted_probs = results['logit_model'].fittedvalues
         actual = results['data_info']['y_binary'] if 'y_binary' in results['data_info'] else None
@@ -352,7 +352,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
         if actual is not None:
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
             
-            # 予測確率分布
+            # Predicted probability distribution
             ax1.hist(predicted_probs[actual == 0], bins=50, alpha=0.7, label='No Policy', color='lightblue', density=True)
             ax1.hist(predicted_probs[actual == 1], bins=50, alpha=0.7, label='Policy Activated', color='orange', density=True)
             ax1.set_xlabel('Predicted Probability', fontsize=12)
@@ -361,7 +361,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
-            # ROC様の散布図
+            # ROC-style scatter plot
             from sklearn.metrics import roc_curve, auc
             fpr, tpr, _ = roc_curve(actual, predicted_probs)
             roc_auc = auc(fpr, tpr)
@@ -380,7 +380,7 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
             plt.savefig(f"{output_dir}/model_performance_evaluation.png", dpi=300, bbox_inches='tight')
             plt.close()
     
-    print(f"\n可視化ファイルが {output_dir} に保存されました:")
+    print(f"\nVisualization files saved to {output_dir}:")
     print("  - policy_coefficients_and_marginal_effects.png")
     print("  - policy_trends_over_time.png") 
     print("  - indicators_correlation_matrix.png")
@@ -389,29 +389,29 @@ def create_visualizations(results: Dict, df_original: pd.DataFrame, output_dir: 
 
 def print_analysis_results(results: Dict):
     """
-    分析結果を整理して出力する
+    Organize and output analysis results
     """
     print("\n" + "="*60)
-    print("マクロプルーデンス政策反応関数分析結果")
+    print("Macroprudential Policy Reaction Function Analysis Results")
     print("="*60)
     
-    # データ概要
+    # Data overview
     info = results['data_info']
-    print(f"\n【データ概要】")
-    print(f"分析サンプル数: {info['sample_size']:,}")
-    print(f"政策発動観測数: {info['policy_activations']:,}")
-    print(f"政策発動率: {info['policy_activation_rate']:.2%}")
-    print(f"使用指標数: {len(info['indicators_used'])}")
+    print(f"\n【Data Overview】")
+    print(f"Analysis sample size: {info['sample_size']:,}")
+    print(f"Policy activation observations: {info['policy_activations']:,}")
+    print(f"Policy activation rate: {info['policy_activation_rate']:.2%}")
+    print(f"Number of indicators used: {len(info['indicators_used'])}")
     
-    # 主要結果（ロジットモデル）
-    print(f"\n【政策発動確率への影響（ロジットモデル）】")
+    # Main results (logit model)
+    print(f"\n【Impact on Policy Activation Probability (Logit Model)】")
     logit = results['logit_model']
     if hasattr(logit, 'prsquared'):
-        print(f"疑似決定係数: {logit.prsquared:.4f}")
+        print(f"Pseudo R-squared: {logit.prsquared:.4f}")
     if hasattr(logit, 'aic'):
         print(f"AIC: {logit.aic:.2f}")
     
-    print("\n主要マクロ経済指標の係数と有意性:")
+    print("\nCoefficients and significance of main macroeconomic indicators:")
     for indicator in results['data_info']['indicators_used']:
         if indicator in logit.params.index:
             coef = logit.params[indicator]
@@ -420,25 +420,25 @@ def print_analysis_results(results: Dict):
                 sig = "***" if pval < 0.01 else "**" if pval < 0.05 else "*" if pval < 0.1 else ""
                 print(f"  {indicator}: {coef:8.4f} {sig:3s} (p={pval:.3f})")
             else:
-                print(f"  {indicator}: {coef:8.4f} (正則化モデル)")
+                print(f"  {indicator}: {coef:8.4f} (regularized model)")
     
-    # 限界効果
-    print(f"\n【限界効果（発動確率への影響）】")
+    # Marginal effects
+    print(f"\n【Marginal Effects (Impact on Activation Probability)】")
     for indicator, me in results['marginal_effects'].items():
         effect = me['marginal_effect_probability']
         pval = me['pvalue']
         sig = "***" if pval < 0.01 else "**" if pval < 0.05 else "*" if pval < 0.1 else ""
         print(f"  {indicator}: {effect:8.6f} {sig:3s}")
     
-    # 政策強度モデル
-    print(f"\n【政策発動強度への影響】")
+    # Policy intensity model
+    print(f"\n【Impact on Policy Activation Intensity】")
     count_model = results['count_model']
     if hasattr(count_model, 'prsquared'):
-        print(f"疑似決定係数: {count_model.prsquared:.4f}")
+        print(f"Pseudo R-squared: {count_model.prsquared:.4f}")
     else:
-        print(f"決定係数: {count_model.rsquared:.4f}")
+        print(f"R-squared: {count_model.rsquared:.4f}")
     
-    print("\n主要マクロ経済指標の係数:")
+    print("\nCoefficients of main macroeconomic indicators:")
     for indicator in results['data_info']['indicators_used']:
         if indicator in count_model.params.index:
             coef = count_model.params[indicator]
@@ -446,37 +446,37 @@ def print_analysis_results(results: Dict):
             sig = "***" if pval < 0.01 else "**" if pval < 0.05 else "*" if pval < 0.1 else ""
             print(f"  {indicator}: {coef:8.4f} {sig:3s} (p={pval:.3f})")
     
-    print("\n注: ***, **, *はそれぞれ1%, 5%, 10%水準で統計的有意")
-    print("    係数は標準化後の値（1標準偏差変化の効果）")
+    print("\nNote: ***, **, * indicate statistical significance at 1%, 5%, 10% levels respectively")
+    print("    Coefficients are standardized values (effect of 1 standard deviation change)")
 
 def main():
-    """メイン分析実行"""
-    print("マクロプルーデンシャル政策反応関数分析を開始します...")
+    """Main analysis execution"""
+    print("Starting macroprudential policy reaction function analysis...")
     
-    # データ読み込み
+    # Data loading
     df = pd.read_csv("../data/dataset/final.csv")
     
-    # 分析実行
+    # Execute analysis
     results = run_macroprudential_policy_analysis(df)
     
-    # 結果出力
+    # Output results
     print_analysis_results(results)
     
-    # 可視化作成・保存
+    # Create and save visualizations
     print("\n" + "="*60)
-    print("可視化作成中...")
+    print("Creating visualizations...")
     print("="*60)
     create_visualizations(results, df)
     
-    # 詳細結果（必要に応じて）
+    # Detailed results (if needed)
     print("\n" + "="*60)
-    print("詳細統計結果")
+    print("Detailed Statistical Results")
     print("="*60)
-    print("\n【ロジットモデル詳細】")
+    print("\n【Logit Model Details】")
     if hasattr(results['logit_model'], 'summary2'):
         print(results['logit_model'].summary2())
     else:
-        print("正則化ロジットモデルの係数:")
+        print("Regularized logit model coefficients:")
         print(results['logit_model'].params)
     
     return results

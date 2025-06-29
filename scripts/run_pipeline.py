@@ -17,7 +17,7 @@ from src.build_dataset import merge_datasets_var
 from src.dataset_assessment import assess_data_quality
 
 def setup_logging(config: Dict) -> None:
-    """ログ設定を初期化"""
+    """Initialize logging configuration"""
     log_config = config.get("logging", {})
     log_level = getattr(logging, log_config.get("level", "INFO"))
     log_format = log_config.get("format", "%(asctime)s - %(levelname)s - %(message)s")
@@ -40,16 +40,16 @@ logger = logging.getLogger(__name__)
 # ================== ステップ0: 各データの取り込み ==================
 
 def load_config() -> Dict:
-    """設定ファイルを読み込む"""
+    """Load configuration file"""
     try:
         config = load_yaml("config")
         return config
     except Exception as e:
-        logger.error(f"設定ファイルの読み込みに失敗: {e}")
+        logger.error(f"Failed to load configuration file: {e}")
         raise
 
 def ensure_directories(config: Dict) -> None:
-    """必要なディレクトリを作成"""
+    """Create necessary directories"""
     paths = config.get("paths", {})
     directories = [
         paths.get("src_data", "../data/raw"),
@@ -60,12 +60,12 @@ def ensure_directories(config: Dict) -> None:
     ]
     for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
-    logger.info("ディレクトリ作成完了")
+    logger.info("Directory creation completed")
 
 def load_imapp_data(config: Dict) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """iMaPPデータを読み込む"""
+    """Load iMaPP data"""
     try:
-        logger.info("[1.1/4] iMaPPデータ読み込み中...")
+        logger.info("[1.1/4] Loading iMaPP data...")
         
         input_config = config.get("input", {})
         paths_config = config.get("paths", {})
@@ -75,20 +75,20 @@ def load_imapp_data(config: Dict) -> tuple[pd.DataFrame, pd.DataFrame]:
         sheet_l = input_config.get("sheet_name_loosening", "MaPP_L")
         save_dir = paths_config.get("src_data", "../data/raw")
         
-        # ファイル存在確認
+        # Check file existence
         import glob
         files = glob.glob(f"../{file_pattern}")
         if not files:
-            raise FileNotFoundError(f"iMaPPファイルが見つかりません: {file_pattern}")
+            raise FileNotFoundError(f"iMaPP file not found: {file_pattern}")
         
         df_iMaPP_tightening = load_mapp_excel(f"../{file_pattern}", sheet_t, save_dir, "MaPP_T.csv")
         df_iMaPP_loosening = load_mapp_excel(f"../{file_pattern}", sheet_l, save_dir, "MaPP_L.csv")
         
-        logger.info(f"iMaPPデータ読み込み完了: T={len(df_iMaPP_tightening)}行, L={len(df_iMaPP_loosening)}行")
+        logger.info(f"iMaPP data loading completed: T={len(df_iMaPP_tightening)} rows, L={len(df_iMaPP_loosening)} rows")
         return df_iMaPP_tightening, df_iMaPP_loosening
         
     except Exception as e:
-        logger.error(f"iMaPPデータ読み込みエラー: {e}")
+        logger.error(f"iMaPP data loading error: {e}")
         raise
 
 
