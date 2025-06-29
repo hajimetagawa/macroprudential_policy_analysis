@@ -10,7 +10,7 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger(__name__)
 
 def create_session_with_retry() -> requests.Session:
-    """リトライ機能付きのHTTPセッションを作成"""
+    """Create HTTP session with retry functionality"""
     session = requests.Session()
     retry_strategy = Retry(
         total=3,
@@ -23,110 +23,110 @@ def create_session_with_retry() -> requests.Session:
     return session
 
 def validate_api_config(api: Dict) -> bool:
-    """API設定の妥当性を検証"""
+    """Validate API configuration validity"""
     required_fields = ["name", "url", "filename"]
     for field in required_fields:
         if not api.get(field):
-            logger.error(f"API設定に必須フィールド '{field}' がありません: {api}")
+            logger.error(f"Required field '{field}' missing in API configuration: {api}")
             return False
     return True
 
 def fetch_from_api(url: str, output_path: str, name: str) -> Optional[pd.DataFrame]:
-    """APIからデータを取得してCSVに保存"""
+    """Fetch data from API and save to CSV"""
     try:
         session = create_session_with_retry()
-        logger.info(f"🌐 {name} データ取得中（APIアクセス）...")
+        logger.info(f"🌐 Fetching {name} data (API access)...")
         
-        # タイムアウト設定でAPIアクセス
+        # API access with timeout setting
         response = session.get(url, timeout=60)
         response.raise_for_status()
         
-        # CSVデータとして読み込み
+        # Read as CSV data
         from io import StringIO
         df = pd.read_csv(StringIO(response.text), low_memory=False)
         
         if df.empty:
-            logger.warning(f"{name}: 空のデータが返されました")
+            logger.warning(f"{name}: Empty data returned")
             return None
             
-        # ファイル保存
+        # Save file
         df.to_csv(output_path, index=False, encoding="utf-8-sig")
-        logger.info(f"✅ 保存完了: {output_path} ({len(df)}行)")
+        logger.info(f"✅ Save complete: {output_path} ({len(df)} rows)")
         
         return df
         
     except requests.exceptions.Timeout:
-        logger.error(f"❌ {name}: APIアクセスがタイムアウトしました")
+        logger.error(f"❌ {name}: API access timed out")
         return None
     except requests.exceptions.ConnectionError:
-        logger.error(f"❌ {name}: API接続に失敗しました")
+        logger.error(f"❌ {name}: API connection failed")
         return None
     except requests.exceptions.HTTPError as e:
-        logger.error(f"❌ {name}: HTTPエラー {e.response.status_code}")
+        logger.error(f"❌ {name}: HTTP error {e.response.status_code}")
         return None
     except pd.errors.EmptyDataError:
-        logger.error(f"❌ {name}: CSVデータが空です")
+        logger.error(f"❌ {name}: CSV data is empty")
         return None
     except Exception as e:
-        logger.error(f"❌ {name}: 予期しないエラー: {e}")
+        logger.error(f"❌ {name}: Unexpected error: {e}")
         return None
 
 def load_from_csv(output_path: str, name: str) -> Optional[pd.DataFrame]:
-    """CSVファイルからデータを読み込み"""
+    """Load data from CSV file"""
     try:
         if not Path(output_path).exists():
-            logger.error(f"❌ {name}: ファイルが存在しません: {output_path}")
+            logger.error(f"❌ {name}: File does not exist: {output_path}")
             return None
             
-        logger.info(f"🧪 [TEST] {name} をCSVから読み込み中...")
+        logger.info(f"🧪 [TEST] Loading {name} from CSV...")
         df = pd.read_csv(output_path, low_memory=False)
         
         if df.empty:
-            logger.warning(f"⚠️ {name}: CSVファイルが空です")
+            logger.warning(f"⚠️ {name}: CSV file is empty")
             return None
             
-        logger.info(f"✅ 読み込み完了: {name} ({len(df)}行)")
+        logger.info(f"✅ Load complete: {name} ({len(df)} rows)")
         return df
         
     except pd.errors.EmptyDataError:
-        logger.error(f"❌ {name}: CSVファイルが空または不正です")
+        logger.error(f"❌ {name}: CSV file is empty or invalid")
         return None
     except Exception as e:
-        logger.error(f"❌ {name}: CSV読み込みエラー: {e}")
+        logger.error(f"❌ {name}: CSV loading error: {e}")
         return None
 
 def fetch_bis_datasets(api_list: List[Dict], output_dir: str, test_mode: bool = False) -> Dict[str, pd.DataFrame]:
     """
-    BISデータを取得して辞書形式で返す。
-    テストモードでは、既存のCSVファイルから読み込む。
+    Fetch BIS data and return in dictionary format.
+    In test mode, load from existing CSV files.
 
     Parameters:
-    - api_list: List[Dict] ← YAMLで定義されたBIS API設定
-    - output_dir: 保存・読み込み先フォルダ
-    - test_mode: TrueならCSVファイルから読み込み（APIアクセスなし）
+    - api_list: List[Dict] ← BIS API configuration defined in YAML
+    - output_dir: Save/load destination folder
+    - test_mode: If True, load from CSV files (no API access)
 
     Returns:
     - Dict[str, pd.DataFrame]: {name: DataFrame}
     
     Raises:
-    - ValueError: API設定が不正な場合
-    - OSError: ディレクトリ作成に失敗した場合
+    - ValueError: When API configuration is invalid
+    - OSError: When directory creation fails
     """
     if not api_list:
-        raise ValueError("API設定リストが空です")
+        raise ValueError("API configuration list is empty")
         
-    # 出力ディレクトリ作成
+    # Create output directory
     try:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        logger.error(f"ディレクトリ作成に失敗: {output_dir}")
+        logger.error(f"Directory creation failed: {output_dir}")
         raise
     
     df_dict = {}
     successful_downloads = 0
     
     for api in api_list:
-        # API設定検証
+        # API configuration validation
         if not validate_api_config(api):
             continue
             
@@ -145,60 +145,60 @@ def fetch_bis_datasets(api_list: List[Dict], output_dir: str, test_mode: bool = 
                 df_dict[name] = df
                 successful_downloads += 1
             else:
-                logger.warning(f"⚠️ {name}: データの取得/読み込みに失敗")
+                logger.warning(f"⚠️ {name}: Data fetch/load failed")
                 
         except Exception as e:
-            logger.error(f"❌ {name}: 処理中にエラーが発生: {e}")
+            logger.error(f"❌ {name}: Error occurred during processing: {e}")
             continue
     
-    logger.info(f"データ取得完了: {successful_downloads}/{len(api_list)} 成功")
+    logger.info(f"Data fetch complete: {successful_downloads}/{len(api_list)} successful")
     
     if not df_dict:
-        raise ValueError("すべてのBISデータの取得に失敗しました")
+        raise ValueError("Failed to fetch all BIS data")
     
     return df_dict
 
 
 def validate_bis_dataframe(df: pd.DataFrame, name: str) -> bool:
     """
-    BISデータの基本的な妥当性を検証
+    Validate basic validity of BIS data
     
     Parameters:
-    - df: 検証対象のDataFrame
-    - name: データセット名
+    - df: DataFrame to validate
+    - name: Dataset name
     
     Returns:
-    - bool: 妥当性チェック結果
+    - bool: Validity check result
     """
     try:
-        # 基本チェック
+        # Basic check
         if df.empty:
-            logger.warning(f"{name}: データが空です")
+            logger.warning(f"{name}: Data is empty")
             return False
             
-        # 必要最小限の列数チェック
+        # Minimum required column count check
         if len(df.columns) < 3:
-            logger.warning(f"{name}: 列数が少なすぎます ({len(df.columns)}列)")
+            logger.warning(f"{name}: Too few columns ({len(df.columns)} columns)")
             return False
             
-        # 一般的なBISデータの必須列チェック
+        # General BIS data required column check
         expected_columns = ["TIME_PERIOD", "OBS_VALUE"]
         missing_columns = [col for col in expected_columns if col not in df.columns]
         
         if missing_columns:
-            logger.warning(f"{name}: 必須列が不足: {missing_columns}")
+            logger.warning(f"{name}: Missing required columns: {missing_columns}")
             return False
             
-        # データ型チェック
+        # Data type check
         if "OBS_VALUE" in df.columns:
             numeric_count = pd.to_numeric(df["OBS_VALUE"], errors="coerce").notna().sum()
             if numeric_count == 0:
-                logger.warning(f"{name}: OBS_VALUE列に数値データがありません")
+                logger.warning(f"{name}: No numeric data in OBS_VALUE column")
                 return False
                 
-        logger.info(f"✅ {name}: データ妥当性チェック通過 ({len(df)}行, {len(df.columns)}列)")
+        logger.info(f"✅ {name}: Data validity check passed ({len(df)} rows, {len(df.columns)} columns)")
         return True
         
     except Exception as e:
-        logger.error(f"❌ {name}: 妥当性チェック中にエラー: {e}")
+        logger.error(f"❌ {name}: Error during validity check: {e}")
         return False

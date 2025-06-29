@@ -11,49 +11,49 @@ def merge_datasets_var(
     how: str = 'outer'
 ) -> pd.DataFrame:
     """
-    複数のデータセットをマージして分析用データセットを構築
+    Merge multiple datasets to build analytical dataset
     
     Parameters:
-    - df_dict: マージ対象のDataFrame辞書
-    - on: マージキーの列名リスト
-    - how: マージ方法（'outer', 'inner', 'left', 'right'）
+    - df_dict: DataFrame dictionary for merging
+    - on: List of merge key column names
+    - how: Merge method ('outer', 'inner', 'left', 'right')
     
     Returns:
-    - pd.DataFrame: マージされたデータセット
+    - pd.DataFrame: Merged dataset
     
     Raises:
-    - ValueError: マージキーが不正な場合
+    - ValueError: When merge keys are invalid
     """
     try:
         if not df_dict:
-            raise ValueError("マージ対象のデータセットが空です")
+            raise ValueError("Dataset dictionary for merging is empty")
             
         if not on:
-            raise ValueError("マージキーが指定されていません")
+            raise ValueError("Merge keys not specified")
         
-        logger.info(f"{len(df_dict)}個のデータセットをマージ中... (キー: {on}, 方法: {how})")
+        logger.info(f"Merging {len(df_dict)} datasets... (keys: {on}, method: {how})")
         
         df_list = []
         total_memory_usage = 0
 
         for name, df in df_dict.items():
             if df.empty:
-                logger.warning(f"{name}: 空のデータセットをスキップ")
+                logger.warning(f"{name}: Skipping empty dataset")
                 continue
                 
-            # メモリ使用量チェック
+            # Memory usage check
             memory_mb = df.memory_usage(deep=True).sum() / 1024**2
             total_memory_usage += memory_mb
             
-            # 必須キーの存在チェック
+            # Required key existence check
             missing_keys = [key for key in on if key not in df.columns]
             if missing_keys:
-                logger.error(f"{name}: マージキーが不足 - {missing_keys}")
+                logger.error(f"{name}: Missing merge keys - {missing_keys}")
                 continue
             
             df_copy = df.copy()
 
-            # マージキー以外にのみプレフィックスを付与
+            # Add prefix only to non-merge key columns
             rename_dict = {
                 col: f"{name}_{col}" for col in df_copy.columns if col not in on
             }
@@ -63,11 +63,11 @@ def merge_datasets_var(
             logger.debug(f"{name}: {len(df_copy)}行, {memory_mb:.1f}MB")
         
         if not df_list:
-            raise ValueError("マージ可能なデータセットがありません")
+            raise ValueError("No datasets available for merging")
             
-        logger.info(f"総メモリ使用量: {total_memory_usage:.1f}MB")
+        logger.info(f"Total memory usage: {total_memory_usage:.1f}MB")
         
-        # 効率的なマージ処理
+        # Efficient merge processing
         if len(df_list) == 1:
             df_var = df_list[0]
         else:
@@ -76,21 +76,21 @@ def merge_datasets_var(
                 df_list
             )
         
-        # 重複列の削除
+        # Remove duplicate columns
         dup_columns = [col for col in df_var.columns if col.endswith('_dup')]
         if dup_columns:
-            logger.warning(f"重複列を削除: {dup_columns}")
+            logger.warning(f"Removing duplicate columns: {dup_columns}")
             df_var = df_var.drop(columns=dup_columns)
 
-        # 列名の正規化
+        # Column name normalization
         if "country" in df_var.columns and "country_code" not in df_var.columns:
             df_var = df_var.rename(columns={"country": "country_code"})
         
-        logger.info(f"マージ完了: {len(df_var)}行, {len(df_var.columns)}列")
+        logger.info(f"Merge complete: {len(df_var)} rows, {len(df_var.columns)} columns")
         return df_var
         
     except Exception as e:
-        logger.error(f"データセットマージエラー: {e}")
+        logger.error(f"Dataset merge error: {e}")
         raise
 
 

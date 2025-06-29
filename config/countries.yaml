@@ -1,12 +1,3 @@
-
-excluded_countries:
-    - 4T
-    - 5A
-    - 5R
-    - G2
-    - XM
-    - XW
-
 countries_scope:
   # for initial analysis
   FRA: {name: "France", iso2: "FR", classification: "AE", region: "Europe", eu_member: true, g20_member: true}

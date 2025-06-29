@@ -4,34 +4,34 @@ import seaborn as sns
 from typing import Tuple
 
 
-# エラー回避のため、ace_toolsを使用せず通常の関数として修正したバージョンを定義
+# Define modified version as regular function without ace_tools to avoid errors
 
 def assess_data_quality(df: pd.DataFrame, time_col: str = 'year_quarter', country_col: str = 'country') -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    初期アセスメントを行い、データ欠損状況、時系列別、国別の充足状況を評価し、可視化する。
+    Perform initial assessment to evaluate data missing situation, time series-wise, and country-wise coverage, with visualization.
 
     Parameters:
-        df (pd.DataFrame): 評価対象のデータフレーム。
-        time_col (str): 四半期または年月を示す列名。
-        country_col (str): 国コードを示す列名。
+        df (pd.DataFrame): DataFrame to evaluate.
+        time_col (str): Column name indicating quarter or year-month.
+        country_col (str): Column name indicating country code.
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: 欠損要約、四半期別充足率、国別充足率。
+        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Missing summary, quarterly coverage rate, country coverage rate.
     """
 
-    # ① 欠損値サマリー
+    # ① Missing value summary
     missing_summary = df.isnull().sum().to_frame('Missing Count')
     missing_summary['Total Rows'] = len(df)
     missing_summary['Missing Ratio (%)'] = 100 * missing_summary['Missing Count'] / missing_summary['Total Rows']
     missing_summary = missing_summary.sort_values(by='Missing Ratio (%)', ascending=False)
 
-    # ② 四半期別の充足率
+    # ② Quarterly coverage rate
     quarter_summary = df.groupby(time_col).apply(lambda x: x.notnull().mean()).T
 
-    # ③ 国別の充足率
+    # ③ Country-wise coverage rate
     country_summary = df.groupby(country_col).apply(lambda x: x.notnull().mean()).T
 
-    # ④ 可視化
+    # ④ Visualization
     heatmap_path = "../results/missing_heatmap.png"
     barplot_path = "../results/missing_ratio_barplot.png"
 

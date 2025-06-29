@@ -9,40 +9,40 @@ logger = logging.getLogger(__name__)
 
 def load_yaml(yaml_name: str, config_dir: str = "../config") -> Dict[str, Any]:
     """
-    YAML設定ファイルを読み込む
+    Load YAML configuration file
     
     Parameters:
-    - yaml_name: YAMLファイル名（拡張子なし）
-    - config_dir: 設定ファイルディレクトリ
+    - yaml_name: YAML file name (without extension)
+    - config_dir: Configuration file directory
     
     Returns:
-    - Dict[str, Any]: YAMLデータ
+    - Dict[str, Any]: YAML data
     
     Raises:
-    - FileNotFoundError: ファイルが存在しない場合
-    - yaml.YAMLError: YAMLパースエラー
+    - FileNotFoundError: When file does not exist
+    - yaml.YAMLError: YAML parsing error
     """
     try:
         file_path = Path(config_dir) / f"{yaml_name}.yaml"
         
         if not file_path.exists():
-            raise FileNotFoundError(f"YAMLファイルが存在しません: {file_path}")
+            raise FileNotFoundError(f"YAML file does not exist: {file_path}")
         
-        logger.debug(f"YAMLファイル読み込み中: {file_path}")
+        logger.debug(f"Loading YAML file: {file_path}")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
             
         if data is None:
-            logger.warning(f"YAMLファイルが空です: {file_path}")
+            logger.warning(f"YAML file is empty: {file_path}")
             return {}
             
-        logger.debug(f"YAML読み込み完了: {yaml_name}")
+        logger.debug(f"YAML loading completed: {yaml_name}")
         return data
         
     except yaml.YAMLError as e:
-        logger.error(f"YAMLパースエラー: {file_path} - {e}")
+        logger.error(f"YAML parsing error: {file_path} - {e}")
         raise
     except Exception as e:
-        logger.error(f"YAML読み込みエラー: {file_path} - {e}")
+        logger.error(f"YAML loading error: {file_path} - {e}")
         raise

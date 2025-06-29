@@ -8,21 +8,21 @@ logger = logging.getLogger(__name__)
 
 def dataset_processor(df_dict: Dict[str, pd.DataFrame], output_dir: str) -> Dict[str, pd.DataFrame]:
     """
-    複数のDataFrameをデータセット名ごとに整形し、processedフォルダに保存。
+    Process multiple DataFrames by dataset name and save to processed folder.
 
     Parameters:
-    - df_dict: dict[str, pd.DataFrame] → nameをキーとしたRaw DataFrame群
-    - output_dir: 加工後のCSVファイル保存先ディレクトリ
+    - df_dict: dict[str, pd.DataFrame] → Raw DataFrame collection with names as keys
+    - output_dir: Directory path to save processed CSV files
 
     Returns:
-    - dict[str, pd.DataFrame]: 加工済みのDataFrame群（分析用）
+    - dict[str, pd.DataFrame]: Processed DataFrame collection for analysis
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    # ===== 各データセットの加工処理をディスパッチ =====
+    # ===== Dispatch processing for each dataset =====
     processed_dict = {}
     for name, df in df_dict.items():
-        print(f"🔧 {name} を整形中...")
+        print(f"🔧 Processing {name}...")
 
         if name == "credit_gap":
             df_proc = process_credit_gap(df)
@@ -47,15 +47,15 @@ def dataset_processor(df_dict: Dict[str, pd.DataFrame], output_dir: str) -> Dict
         
 
         else:
-            print(f"⚠️ 未対応のデータセット: {name} → スキップ")
+            print(f"⚠️ Unsupported dataset: {name} → Skipping")
             continue
 
-        # 保存
+        # Save processed data
         save_path = os.path.join(output_dir, f"{name}.csv")
         df_proc.to_csv(save_path, index=False, encoding="utf-8-sig")
-        print(f"✅ 保存完了: {save_path}")
+        print(f"✅ Save complete: {save_path}")
 
-        # 結果格納
+        # Store results
         processed_dict[name] = df_proc
 
     return processed_dict
@@ -63,36 +63,36 @@ def dataset_processor(df_dict: Dict[str, pd.DataFrame], output_dir: str) -> Dict
 
 
 def validate_required_columns(df: pd.DataFrame, required_columns: list, dataset_name: str) -> bool:
-    """必須列の存在をチェック"""
+    """Check for required column existence"""
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
-        logger.error(f"{dataset_name}: 必須列が不足 - {missing_columns}")
+        logger.error(f"{dataset_name}: Missing required columns - {missing_columns}")
         return False
     return True
 
 def safe_numeric_conversion(series: pd.Series, column_name: str) -> pd.Series:
-    """安全な数値変換"""
+    """Safe numeric conversion"""
     try:
         converted = pd.to_numeric(series, errors="coerce")
         null_count = converted.isnull().sum()
         if null_count > 0:
-            logger.warning(f"{column_name}: {null_count}個の値を数値変換できませんでした")
+            logger.warning(f"{column_name}: {null_count} values could not be converted to numeric")
         return converted.fillna(0)
     except Exception as e:
-        logger.error(f"{column_name}: 数値変換エラー - {e}")
+        logger.error(f"{column_name}: Numeric conversion error - {e}")
         return series.fillna(0)
 
 def process_credit_gap(df: pd.DataFrame) -> pd.DataFrame:
-    """クレジットギャップデータの処理"""
+    """Process credit gap data"""
     try:
-        # ===== 必要なカラムのみ抽出 =====
+        # ===== Extract only necessary columns =====
         required_columns = ["BORROWERS_CTY", "CG_DTYPE", "TIME_PERIOD", "OBS_VALUE"]
         if not validate_required_columns(df, required_columns, "credit_gap"):
-            raise ValueError("クレジットギャップ: 必須列が不足")
+            raise ValueError("Credit gap: Missing required columns")
             
         df = df[required_columns].copy()
 
-        # ===== 列名の変換 =====
+        # ===== Column name conversion =====
         df = df.rename(columns={
             "BORROWERS_CTY": "country",
             "CG_DTYPE": "data_type",
@@ -100,10 +100,10 @@ def process_credit_gap(df: pd.DataFrame) -> pd.DataFrame:
             "OBS_VALUE": "obs_value"
         })
 
-        # ===== 値の変換（数値化） =====
+        # ===== Value conversion (numeric) =====
         df["obs_value"] = safe_numeric_conversion(df["obs_value"], "credit_gap_obs_value")
 
-        # ===== データタイプのラベル変換 =====
+        # ===== Data type label conversion =====
         dtype_map = {
             "A": "actual",
             "B": "trend_hp_filter",
@@ -111,22 +111,22 @@ def process_credit_gap(df: pd.DataFrame) -> pd.DataFrame:
         }
         df["data_type"] = df["data_type"].replace(dtype_map)
 
-        # ===== ワイド形式への変換 =====
+        # ===== Convert to wide format =====
         df = df.pivot(index=["country", "year_quarter"], columns="data_type", values="obs_value").reset_index()
-        logger.info(f"クレジットギャップ処理完了: {len(df)}行")
+        logger.info(f"Credit gap processing complete: {len(df)} rows")
         return df
             
     except Exception as e:
-        logger.error(f"クレジットギャップ処理エラー: {e}")
+        logger.error(f"Credit gap processing error: {e}")
         raise
 
 def process_total_credit(df: pd.DataFrame) -> pd.DataFrame:
-    # ===== 必要なカラムのみ抽出 =====
+    # ===== Extract only necessary columns =====
     keep_columns = ["BORROWERS_CTY", "TC_BORROWERS", "TC_LENDERS", "VALUATION", "UNIT_TYPE",
                      "TC_ADJUST", "TIME_PERIOD", "OBS_VALUE"]
     df = df[keep_columns]
 
-    # ===== 列名の変換 =====
+    # ===== Column name conversion =====
     df = df.rename(columns={
         "BORROWERS_CTY": "country",
         "TC_BORROWERS": "borrowing_sector",
@@ -138,10 +138,10 @@ def process_total_credit(df: pd.DataFrame) -> pd.DataFrame:
         "OBS_VALUE": "obs_value"
     })
 
-    # ===== 値の変換（数値化） =====
+    # ===== Value conversion (numeric) =====
     df["obs_value"] = pd.to_numeric(df["obs_value"], errors="coerce").fillna(0)
 
-    # ===== ラベルマッピング =====
+    # ===== Label mapping =====
     borrowing_sector_map = {
         "G": "general_government",
         "H": "households_and_npishs",
@@ -177,7 +177,7 @@ def process_total_credit(df: pd.DataFrame) -> pd.DataFrame:
     }
     df["adjustment"] = df["adjustment"].replace(adjustment_map)
 
-    # ===== 条件フィルター =====
+    # ===== Conditional filtering =====
     df = df[
         (df["unit_type"] == "pct_of_gdp") &
         (df["valuation_method"] == "market_value") &
@@ -187,7 +187,7 @@ def process_total_credit(df: pd.DataFrame) -> pd.DataFrame:
     df_all_lender = df[df["lending_sector"] == "all_sectors"]
     df_domestic_banks_lender = df[df["lending_sector"] == "domestic_banks"]
 
-    # ===== ワイド形式への変換 =====
+    # ===== Convert to wide format =====
     df_all_lender = df_all_lender.pivot(
         index=["country", "year_quarter"], 
         columns="borrowing_sector", 
@@ -210,7 +210,7 @@ def process_total_credit(df: pd.DataFrame) -> pd.DataFrame:
         for col in df_domestic_banks_lender.columns
     ]
 
-    # ===== 横にマージ（列追加） =====
+    # ===== Horizontal merge (add columns) =====
     df_merged = pd.merge(
         df_all_lender,
         df_domestic_banks_lender,
@@ -221,11 +221,11 @@ def process_total_credit(df: pd.DataFrame) -> pd.DataFrame:
     return df_merged
 
 def process_debt_service_ratio(df: pd.DataFrame) -> pd.DataFrame:
-    # ===== 必要なカラムのみ抽出 =====
+    # ===== Extract only necessary columns =====
     keep_columns = ["BORROWERS_CTY", "DSR_BORROWERS", "TIME_PERIOD", "OBS_VALUE"]
     df = df[keep_columns]
 
-    # ===== 列名の変換 =====
+    # ===== Column name conversion =====
     df = df.rename(columns={
         "BORROWERS_CTY": "country",
         "DSR_BORROWERS": "dsr_borrowers",
@@ -233,10 +233,10 @@ def process_debt_service_ratio(df: pd.DataFrame) -> pd.DataFrame:
         "OBS_VALUE": "obs_value"
     })
 
-    # ===== 値の変換（数値化） =====
+    # ===== Value conversion (numeric) =====
     df["obs_value"] = pd.to_numeric(df["obs_value"], errors="coerce").fillna(0)
 
-    # ===== データタイプのラベル変換 =====
+    # ===== Data type label conversion =====
     dsr_borrowers_map = {
         "H": "households_and_npishs",
         "N": "non_financial_corporations",
@@ -244,7 +244,7 @@ def process_debt_service_ratio(df: pd.DataFrame) -> pd.DataFrame:
     }
     df["dsr_borrowers"] = df["dsr_borrowers"].replace(dsr_borrowers_map)
 
-    # ===== ワイド形式への変換 =====
+    # ===== Convert to wide format =====
     df = df.pivot(
         index=["country", "year_quarter"], 
         columns="dsr_borrowers", 
@@ -254,13 +254,13 @@ def process_debt_service_ratio(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def process_residential_property_price(df: pd.DataFrame) -> pd.DataFrame:
-    # ===== 必要なカラムのみ抽出 =====
+    # ===== Extract only necessary columns =====
     keep_columns = ["REF_AREA", "VALUE", "UNIT_MEASURE", "TIME_PERIOD", "OBS_VALUE"]
     df = df[keep_columns]
 
     df["UNIT_MEASURE"] = df["UNIT_MEASURE"].astype("str")   
 
-    # ===== 列名の変換 =====
+    # ===== Column name conversion =====
     df = df.rename(columns={
         "REF_AREA": "country",
         "VALUE": "value",
@@ -269,10 +269,10 @@ def process_residential_property_price(df: pd.DataFrame) -> pd.DataFrame:
         "OBS_VALUE": "obs_value"
     })
 
-    # ===== 値の変換（数値化） =====
+    # ===== Value conversion (numeric) =====
     df["obs_value"] = pd.to_numeric(df["obs_value"], errors="coerce").fillna(0)
 
-    # ===== データタイプのラベル変換 =====
+    # ===== Data type label conversion =====
     value_map = {
         "N": "nominal",
         "R": "real",
@@ -285,10 +285,10 @@ def process_residential_property_price(df: pd.DataFrame) -> pd.DataFrame:
     }
     df["unit_of_measure"] = df["unit_of_measure"].replace(unit_of_measure_map)
 
-    # ===== 条件フィルター =====
+    # ===== Conditional filtering =====
     df = df[df["value"] == "real"]
 
-    # ===== ワイド形式への変換 =====
+    # ===== Convert to wide format =====
     df = df.pivot(
         index=["country", "year_quarter"], 
         columns="unit_of_measure", 
@@ -298,11 +298,11 @@ def process_residential_property_price(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def process_commercial_property_price(df: pd.DataFrame) -> pd.DataFrame:
-    # ===== 必要なカラムのみ抽出 =====
+    # ===== Extract only necessary columns =====
     keep_columns = ["FREQ", "REF_AREA", "COVERED_AREA", "RE_TYPE", "COMPILING_ORG", "PRICED_UNIT", "UNIT_MEASURE", "TIME_PERIOD", "OBS_VALUE"]
     df = df[keep_columns]
 
-    # ===== 列名の変換 =====
+    # ===== Column name conversion =====
     df = df.rename(columns={
         "FREQ": "frequency",
         "REF_AREA": "country",
@@ -315,10 +315,10 @@ def process_commercial_property_price(df: pd.DataFrame) -> pd.DataFrame:
         "OBS_VALUE": "obs_value"
     })
 
-    # ===== 値の変換（数値化） =====
+    # ===== Value conversion (numeric) =====
     df["obs_value"] = pd.to_numeric(df["obs_value"], errors="coerce").fillna(0)
 
-    # ===== データタイプのラベル変換 =====
+    # ===== Data type label conversion =====
     covered_area_map = {
         "0": "whole_country",
         "2": "capital",
@@ -341,7 +341,7 @@ def process_commercial_property_price(df: pd.DataFrame) -> pd.DataFrame:
     }
     df["real_estate_type"] = df["real_estate_type"].replace(real_estate_type_map)
 
-    # ===== 条件フィルター =====
+    # ===== Conditional filtering =====
     df = df[
         (df["frequency"] == "Q") &
         (df["unit_of_measure"] != "USD") &
@@ -349,18 +349,18 @@ def process_commercial_property_price(df: pd.DataFrame) -> pd.DataFrame:
         (df["unit_of_measure"] != "PHP")
     ]
 
-    # ===== 四半期 × 国ごとの平均値を算出 =====
+    # ===== Calculate average values by quarter and country =====
     df_grouped = df.groupby(["country", "year_quarter"], as_index=False)["obs_value"].mean()
 
     return df_grouped
 
 
 def process_effective_exchange_rate(df: pd.DataFrame) -> pd.DataFrame:
-    # ===== 必要なカラムのみ抽出 =====
+    # ===== Extract only necessary columns =====
     keep_columns = ["FREQ", "EER_TYPE", "EER_BASKET", "REF_AREA", "TIME_PERIOD", "OBS_VALUE"]
     df = df[keep_columns]
 
-    # ===== 列名の変換 =====
+    # ===== Column name conversion =====
     df = df.rename(columns={
         "FREQ": "frequency",
         "EER_TYPE": "eer_type",
@@ -371,10 +371,10 @@ def process_effective_exchange_rate(df: pd.DataFrame) -> pd.DataFrame:
         "OBS_VALUE": "obs_value"
     })
 
-    # ===== 値の変換（数値化） =====
+    # ===== Value conversion (numeric) =====
     df["obs_value"] = pd.to_numeric(df["obs_value"], errors="coerce").fillna(0)
 
-    # ===== データタイプのラベル変換 =====
+    # ===== Data type label conversion =====
     eer_type_map = {
         "N": "nominal",
         "R": "real"
@@ -387,35 +387,35 @@ def process_effective_exchange_rate(df: pd.DataFrame) -> pd.DataFrame:
     }
     df["eer_basket"] = df["eer_basket"].replace(eer_basket_map)
 
-    # ===== 条件フィルター =====
+    # ===== Conditional filtering =====
     df = df[
         (df["frequency"] == "M") &
         (df["eer_basket"] == "broad")
     ]
 
-    # ===== ワイド形式への変換 =====
+    # ===== Convert to wide format =====
     df = df.pivot(
         index=["country", "year_month"], 
         columns="eer_type", 
         values="obs_value"
         ).reset_index()
 
-    # ===== 四半期情報を生成（YYYY-MM → YYYY-QX） =====
+    # ===== Generate quarterly information (YYYY-MM → YYYY-QX) =====
     df["year_quarter"] = pd.to_datetime(df["year_month"] + "-01").dt.to_period("Q").astype(str)
     df["year_quarter"] = df["year_quarter"].str.replace("Q", "-Q", regex=False)  # → "2020Q1" → "2020-Q1"
 
-    # ===== 四半期単位で平均を計算 =====
+    # ===== Calculate quarterly averages =====
     df_quarterly = df.groupby(["country", "year_quarter"], as_index=False).mean(numeric_only=True)
 
     return df_quarterly
 
 
 def process_central_bank_policy_rate(df: pd.DataFrame) -> pd.DataFrame:
-    # ===== 必要なカラムのみ抽出 =====
+    # ===== Extract only necessary columns =====
     keep_columns = ["FREQ", "REF_AREA", "TIME_PERIOD", "OBS_VALUE", "OBS_STATUS"]
     df = df[keep_columns]
 
-    # ===== 列名の変換 =====
+    # ===== Column name conversion =====
     df = df.rename(columns={
         "FREQ": "frequency",
         "REF_AREA": "country",
@@ -424,20 +424,20 @@ def process_central_bank_policy_rate(df: pd.DataFrame) -> pd.DataFrame:
         "OBS_STATUS": "obs_status"
     })
 
-    # ===== 値の変換（数値化） =====
+    # ===== Value conversion (numeric) =====
     df["obs_value"] = pd.to_numeric(df["obs_value"], errors="coerce").fillna(0)
 
-    # ===== 条件フィルター =====
+    # ===== Conditional filtering =====
     df = df[
         (df["frequency"] == "M") &
         (df["obs_status"] != "M")
     ]
 
-    # ===== 四半期情報を生成（YYYY-MM → YYYY-QX） =====
+    # ===== Generate quarterly information (YYYY-MM → YYYY-QX) =====
     df["year_quarter"] = pd.to_datetime(df["year_month"] + "-01").dt.to_period("Q").astype(str)
     df["year_quarter"] = df["year_quarter"].str.replace("Q", "-Q", regex=False)  # → "2020Q1" → "2020-Q1"
 
-    # ===== 四半期単位で最大値を計算 =====  <=解釈については要検討
+    # ===== Calculate quarterly maximum values ===== # Note: interpretation needs review
     df_quarterly = df.groupby(["country", "year_quarter"], as_index=False).max(numeric_only=True)
     
     return df_quarterly

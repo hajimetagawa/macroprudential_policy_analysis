@@ -8,16 +8,16 @@ logger = logging.getLogger(__name__)
 
 def month_to_quarter(month: int) -> str:
     """
-    月 → 四半期(Q1～Q4)への変換
+    Convert month to quarter (Q1~Q4)
     
     Parameters:
-    - month: 月（1-12）
+    - month: Month (1-12)
     
     Returns:
-    - str: 四半期文字列（Q1, Q2, Q3, Q4, Q?）
+    - str: Quarter string (Q1, Q2, Q3, Q4, Q?)
     """
     if not isinstance(month, (int, float)):
-        logger.warning(f"不正な月データ: {month} (type: {type(month)})")
+        logger.warning(f"Invalid month data: {month} (type: {type(month)})")
         return "Q?"
         
     month = int(month)
@@ -31,22 +31,22 @@ def month_to_quarter(month: int) -> str:
     elif month in [10, 11, 12]:
         return "Q4"
     else:
-        logger.warning(f"不正な月値: {month}")
+        logger.warning(f"Invalid month value: {month}")
         return "Q?"
 
 
 def transform_imapp_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    iMaPPデータを整形（Wide→Long、異常値処理、列名リネーム、四半期追加）
+    Transform iMaPP data (Wide→Long, outlier processing, column renaming, quarter addition)
 
     Parameters:
-    - df: Wide形式の入力DataFrame
+    - df: Wide format input DataFrame
 
     Returns:
-    - Long形式に整形されたDataFrame
+    - DataFrame formatted to Long format
     """
 
-    # ===== 設定定義 =====
+    # ===== Configuration definition =====
     rename_map = {
         "Country": "country",
         "iso2": "country_code",
@@ -70,32 +70,32 @@ def transform_imapp_data(df: pd.DataFrame) -> pd.DataFrame:
     reserved_cols = list(rename_map.keys())
     reserved_cols_base = [col for col in reserved_cols if col not in ["mapp_tool", "obs", "Quarter"]]
 
-    # ===== カラム名クレンジング（_T, _Lの除去） =====
+    # ===== Column name cleansing (remove _T, _L) =====
     df.columns = [col.replace("_T", "").replace("_L", "") for col in df.columns]
 
-    # ===== 必要カラムの抽出（+ 指標列） =====
+    # ===== Extract required columns (+ indicator columns) =====
     df = df[[col for col in reserved_cols_base if col in df.columns] + 
             [col for col in df.columns if col not in reserved_cols_base]]
 
-    # ===== 異常値クリーニング（Wide形式） =====
+    # ===== Outlier cleaning (Wide format) =====
     for col in df.columns:
         if col not in reserved_cols_base:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
-    # ===== Wide → Long変換（mapp_tool列を追加） =====
+    # ===== Wide → Long conversion (add mapp_tool column) =====
     df_long = df.melt(
         id_vars=reserved_cols_base,
         var_name="mapp_tool",
         value_name="obs"
     )
 
-    # ===== 四半期列の追加 =====
+    # ===== Add quarter column =====
     df_long["Quarter"] = df_long["Year"].astype(str) + "-" + df_long["Month"].apply(month_to_quarter)
 
-    # ===== 列名変換 =====
+    # ===== Column name conversion =====
     df_long = df_long.rename(columns=rename_map)
 
-    # ===== 列順整形（存在する列のみ） =====
+    # ===== Column order formatting (existing columns only) =====
     df_long = df_long[[col for col in output_columns if col in df_long.columns]]
 
     return df_long
@@ -103,94 +103,94 @@ def transform_imapp_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def validate_imapp_dataframe(df: pd.DataFrame) -> bool:
     """
-    iMaPP DataFrameの基本的な妥当性を検証
+    Validate basic validity of iMaPP DataFrame
     
     Parameters:
-    - df: 検証対象のDataFrame
+    - df: DataFrame to validate
     
     Returns:
-    - bool: 妥当性チェック結果
+    - bool: Validity check result
     """
     try:
         if df.empty:
-            logger.error("iMaPP DataFrameが空です")
+            logger.error("iMaPP DataFrame is empty")
             return False
             
         required_columns = ["country", "year", "month", "mapp_tool", "obs"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
-            logger.error(f"iMaPP必須列が不足: {missing_columns}")
+            logger.error(f"iMaPP missing required columns: {missing_columns}")
             return False
             
-        # データ型チェック
+        # Data type check
         if not pd.api.types.is_numeric_dtype(df["year"]):
-            logger.warning("年データが数値型ではありません")
+            logger.warning("Year data is not numeric type")
             
         if not pd.api.types.is_numeric_dtype(df["month"]):
-            logger.warning("月データが数値型ではありません")
+            logger.warning("Month data is not numeric type")
             
         if not pd.api.types.is_numeric_dtype(df["obs"]):
-            logger.warning("観測値データが数値型ではありません")
+            logger.warning("Observation value data is not numeric type")
             
-        logger.info(f"iMaPPデータ妥当性チェック通過 ({len(df)}行, {len(df.columns)}列)")
+        logger.info(f"iMaPP data validity check passed ({len(df)} rows, {len(df.columns)} columns)")
         return True
         
     except Exception as e:
-        logger.error(f"iMaPPデータ妥当性チェックエラー: {e}")
+        logger.error(f"iMaPP data validity check error: {e}")
         return False
 
 def prepare_imapp_for_analysis(df: pd.DataFrame) -> pd.DataFrame:
     """
-    iMaPPデータを分析用に整形する
+    Format iMaPP data for analysis
     
     Parameters:
-    - df: Long形式のiMaPP DataFrame
+    - df: Long format iMaPP DataFrame
     
     Returns:
-    - pd.DataFrame: 分析用に集約されたDataFrame
+    - pd.DataFrame: DataFrame aggregated for analysis
     
     Raises:
-    - ValueError: データ妥当性エラー
+    - ValueError: Data validity error
     """
     try:
-        # データ妥当性チェック
+        # Data validity check
         if not validate_imapp_dataframe(df):
-            raise ValueError("iMaPPデータの妥当性チェックに失敗")
+            raise ValueError("iMaPP data validity check failed")
             
         df = df.copy()
 
-        # ===== 1. "SUM_17" のレコードを除外 =====
+        # ===== 1. Exclude "SUM_17" records =====
         initial_count = len(df)
         df = df[df["mapp_tool"] != "SUM_17"]
         filtered_count = len(df)
-        logger.info(f"SUM_17レコードを除外: {initial_count} → {filtered_count}行")
+        logger.info(f"Excluded SUM_17 records: {initial_count} → {filtered_count} rows")
 
-        # ===== 2. 月次 → 四半期末日付に変換（quarter_end列を追加）=====
+        # ===== 2. Convert monthly to quarter end dates (add quarter_end column) =====
         try:
             df["quarter_end"] = pd.to_datetime(df["year"].astype(str) + "-" + df["month"].astype(str) + "-01")
             df["quarter_end"] = df["quarter_end"] + pd.offsets.QuarterEnd(0)
         except Exception as e:
-            logger.error(f"四半期日付変換エラー: {e}")
+            logger.error(f"Quarter date conversion error: {e}")
             raise
 
-        # ===== 3. 四半期集計（Aggregate + Binary）=====
+        # ===== 3. Quarter aggregation (Aggregate + Binary) =====
         try:
             grouped = df.groupby([
                 "country", "country_code", "mapp_tool", 
                 "advanced", "emerging", "year", "year_quarter"
             ]).agg(
-                obs_agg=("obs", "sum"),    # 強度（実施回数）
-                obs_bin=("obs", "max")     # 実施されたかどうか（1つでもあれば1）
+                obs_agg=("obs", "sum"),    # Intensity (implementation count)
+                obs_bin=("obs", "max")     # Whether implemented (1 if any implementation)
             ).reset_index()
             
-            logger.info(f"四半期集計完了: {len(grouped)}行")
+            logger.info(f"Quarter aggregation complete: {len(grouped)} rows")
             return grouped
             
         except Exception as e:
-            logger.error(f"四半期集計エラー: {e}")
+            logger.error(f"Quarter aggregation error: {e}")
             raise
             
     except Exception as e:
-        logger.error(f"iMaPP分析データ準備エラー: {e}")
+        logger.error(f"iMaPP analysis data preparation error: {e}")
         raise
