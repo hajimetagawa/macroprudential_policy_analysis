@@ -351,7 +351,8 @@ def process_commercial_property_price(df: pd.DataFrame) -> pd.DataFrame:
 
     # ===== Calculate average values by quarter and country =====
     df_grouped = df.groupby(["country", "year_quarter"], as_index=False)["obs_value"].mean()
-
+    df_grouped = df_grouped.rename(columns={"obs_value": "average_index"})
+    
     return df_grouped
 
 
@@ -439,5 +440,6 @@ def process_central_bank_policy_rate(df: pd.DataFrame) -> pd.DataFrame:
 
     # ===== Calculate quarterly maximum values ===== # Note: interpretation needs review
     df_quarterly = df.groupby(["country", "year_quarter"], as_index=False).max(numeric_only=True)
-    
+    df_quarterly = df_quarterly.rename(columns={"obs_value": "quarterly_max"})
+
     return df_quarterly

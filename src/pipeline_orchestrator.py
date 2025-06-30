@@ -152,7 +152,7 @@ class PipelineOrchestrator:
             # Save data
             output_config = self.config.get("output", {})
             dataset_dir = self.config.get("paths", {}).get("dataset_output", "../data/dataset")
-            output_file = output_config.get("imapp_analysis_dataset", "imapp_analysis_dataset_.csv")
+            output_file = output_config.get("imapp_analysis_dataset", "imapp_bis_merged_dataset.csv")
             output_path = Path(dataset_dir) / output_file
             df_imapp_analysis_dataset.to_csv(output_path, index=False, encoding="utf-8-sig")
             
@@ -203,7 +203,7 @@ class PipelineOrchestrator:
             # Save results
             output_config = self.config.get("output", {})
             dataset_dir = self.config.get("paths", {}).get("dataset_output", "../data/dataset")
-            output_file = output_config.get("final_dataset", "final.csv")
+            output_file = output_config.get("final_dataset", "macroprudential_analysis_dataset.csv")
             output_path = Path(dataset_dir) / output_file
             merged_df.to_csv(output_path, index=False, encoding="utf-8-sig")
             

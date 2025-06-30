@@ -14,8 +14,8 @@ output:
   main_agg_csv: iMaPP_main_tools_quarterly_agg.csv
   main_bin_csv: iMaPP_main_tools_quarterly_bin.csv
   imapp_dataset_t: imapp_dataset_t.csv
-  imapp_analysis_dataset: imapp_analysis_dataset_.csv
-  final_dataset: final.csv
+  imapp_analysis_dataset: imapp_bis_merged_dataset.csv
+  final_dataset: macroprudential_analysis_dataset.csv
 
 logging:
   level: INFO

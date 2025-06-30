@@ -27,13 +27,13 @@ class AnalysisEngine:
     def __init__(self):
         """Initialize analysis engine"""
         self.macro_indicators = [
-            'credit_gap_actual',
-            'residential_property_price_yoy_changes_pct',
-            'debt_service_ratio_private_non_financial_sector',
-            'central_bank_policy_rate_obs_value',
-            'total_credit_private_non_financial_sector_all_sector',
-            'effective_exchange_rate_real',
-            'commercial_property_price_obs_value'
+            'CRG',          # credit_gap_trend_hp_filter
+            'CRNF',         # total_credit_private_non_financial_sector_all_sector
+            'DSR',          # debt_service_ratio_private_non_financial_sector
+            'RPP',          # residential_property_price_yoy_changes_pct
+            'CPP',          # commercial_property_price_average_index
+            'REER',         # effective_exchange_rate_real
+            'CBPOL'         # central_bank_policy_rate_quarterly_max
         ]
     
     def _preprocess_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, list]:
@@ -42,7 +42,7 @@ class AnalysisEngine:
         
         # Select available indicators
         available_indicators = [col for col in self.macro_indicators if col in df.columns]
-        cols_to_use = ['obs_bin', 'obs_agg', 'country_code', 'year'] + available_indicators
+        cols_to_use = ['policy_binary', 'policy_intensity', 'country_code', 'period'] + available_indicators
         
         print(f"Using macroeconomic indicators: {available_indicators}")
         
@@ -50,7 +50,7 @@ class AnalysisEngine:
         df_clean = df[cols_to_use].copy()
         
         # Convert to numeric
-        numeric_cols = ['obs_bin', 'obs_agg'] + available_indicators
+        numeric_cols = ['policy_binary', 'policy_intensity'] + available_indicators
         for col in numeric_cols:
             df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
         
@@ -58,7 +58,7 @@ class AnalysisEngine:
         print(f"Sample size before processing: {len(df_clean)}")
         df_clean = df_clean.dropna()
         print(f"Sample size after processing: {len(df_clean)}")
-        print(f"Policy activation observations: {df_clean['obs_bin'].sum()}")
+        print(f"Policy activation observations: {df_clean['policy_binary'].sum()}")
         
         if len(df_clean) == 0:
             raise ValueError("No analyzable data available")
@@ -94,7 +94,7 @@ class AnalysisEngine:
     def _prepare_model_data(self, df_clean: pd.DataFrame, available_indicators: list) -> Dict:
         """Prepare data for modeling"""
         # Add year fixed effects
-        df_clean = pd.get_dummies(df_clean, columns=['year'], prefix='year', drop_first=True)
+        df_clean = pd.get_dummies(df_clean, columns=['period'], prefix='year', drop_first=True)
         
         # Prepare explanatory variables
         macro_cols = available_indicators
@@ -103,8 +103,8 @@ class AnalysisEngine:
         
         # Remove variables causing perfect separation
         X_data = df_clean[X_cols]
-        policy_activated = df_clean['obs_bin'] == 1
-        policy_not_activated = df_clean['obs_bin'] == 0
+        policy_activated = df_clean['policy_binary'] == 1
+        policy_not_activated = df_clean['policy_binary'] == 0
         
         vars_to_keep = []
         for col in X_cols:
@@ -126,8 +126,8 @@ class AnalysisEngine:
             raise ValueError("No usable explanatory variables available")
         
         X = sm.add_constant(df_clean[X_cols].astype(float))
-        y_binary = df_clean['obs_bin'].astype(int)
-        y_count = df_clean['obs_agg'].astype(int)
+        y_binary = df_clean['policy_binary'].astype(int)
+        y_count = df_clean['policy_intensity'].astype(int)
         
         return {
             'X': X,
@@ -297,9 +297,9 @@ class AnalysisEngine:
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
         
         # Annual policy activation rate
-        yearly_stats = df_original.groupby('year').agg({
-            'obs_bin': ['count', 'sum', 'mean'],
-            'obs_agg': 'mean'
+        yearly_stats = df_original.groupby('period').agg({
+            'policy_binary': ['count', 'sum', 'mean'],
+            'policy_intensity': 'mean'
         }).round(4)
         yearly_stats.columns = ['total_obs', 'activations', 'activation_rate', 'avg_intensity']
         
@@ -357,8 +357,8 @@ class AnalysisEngine:
         
         for i, indicator in enumerate(indicators):
             if i < len(axes):
-                activated = df_original[df_original['obs_bin'] == 1][indicator].dropna()
-                not_activated = df_original[df_original['obs_bin'] == 0][indicator].dropna()
+                activated = df_original[df_original['policy_binary'] == 1][indicator].dropna()
+                not_activated = df_original[df_original['policy_binary'] == 0][indicator].dropna()
                 
                 axes[i].hist(not_activated, bins=30, alpha=0.7, label='No Policy (0)', color='lightblue', density=True)
                 axes[i].hist(activated, bins=30, alpha=0.7, label='Policy Activated (1)', color='orange', density=True)
